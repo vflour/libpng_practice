@@ -55,9 +55,15 @@ int read_png(FILE* f_ptr){
     if(!setup_png(&png_ptr, &info_ptr)){
         return 0;
     }
+    // sue setjump since libpng relies on it for errors
+    if (setjump(png_jmpbuf(png_ptr))){
+        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+        printf("Encountered an error while reading the png\n");
+        return 0;
+    }
 
     // dispose structs
-    png_destroy_read_struct(png_ptr, info_ptr, NULL);
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
     return 1;
 }
 
