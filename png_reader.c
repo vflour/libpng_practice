@@ -82,7 +82,7 @@ int read_bg(uchar* red,uchar* green,uchar* blue, png_structp png_ptr, png_infop 
 /// @param info_ptr 
 /// @param f_ptr 
 /// @return 
-int read_png(png_structp png_ptr, png_infop info_ptr, FILE* f_ptr){
+int read_png(png_structp png_ptr, png_infop info_ptr, FILE* f_ptr, int* png_width, int* png_height, png_bytepp* png_data){
     // According to the guide, it takes the file pointer and stores it in the png pointer
     png_init_io(png_ptr, f_ptr);
     // Lets the library know that the first 8 bytes were checked, so it wont find it at the file pointer location
@@ -110,12 +110,14 @@ int read_png(png_structp png_ptr, png_infop info_ptr, FILE* f_ptr){
         png_error (png_ptr, "Image is too wide to process in memory\n");
 
     // Get the row pointers 
-    png_bytepp row_pointers = png_get_rows(png_ptr, info_ptr);
+    *png_data = png_get_rows(png_ptr, info_ptr);
+    *png_width = width;
+    *png_height = height;
     
     return 0;
 }
 
-int open_png(FILE* f_ptr){
+int open_png(FILE* f_ptr, int* width, int* height, png_bytepp* png_data){
     // Exit if the file is invalid
     if(!check_file(f_ptr)){
         return 0;
@@ -133,34 +135,28 @@ int open_png(FILE* f_ptr){
         return 0;
     }
 
-    read_png(png_ptr, info_ptr, f_ptr);
+    read_png(png_ptr, info_ptr, f_ptr, width, height, png_data);
     // dispose structs
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
     return 1;
 }
 
 
-int main(int argc, char *argv[]){
-    printf("Starting program \n");
-    // check arguments
-    if(argc != 2){
-        printf("Expected file argument, closing...\n");
-        return 2;
-    }
-    // open the file 
-    char* path = argv[1];
+int load_png(char* path, int* width, int* height, png_bytepp* png_data){
     FILE* f_ptr = fopen(path, "rb");
 
     // pointer exists if file exists
     if(f_ptr){
-        if(!open_png(f_ptr)){
+        if(!open_png(f_ptr, width, height, png_data)){
             printf("Failed to read png.\n");
         }
         // close at the end
         fclose(f_ptr);
+        return 0;
     }else{
         printf("No such file: %s \n", path);
+        return 0;
     }
 
-    return 0;
+    return 1;
 }
