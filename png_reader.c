@@ -1,6 +1,7 @@
 #include "png.h"
 #include <stdio.h>
 typedef unsigned char uchar;
+#define PIXEL_SIZE 8
 
 /// @brief Checks the png signature and outputs to consule
 /// @param f_ptr 
@@ -16,7 +17,22 @@ int check_file(FILE* f_ptr){
         return 0;
     }
     return 1;
-} 
+}   
+
+/// @brief Custom callback function for handling unknown chunks. Just prints a message
+/// @param png_ptr 
+/// @param chunk 
+/// @return 
+int chunk_callback(png_structp png_ptr, png_unknown_chunkp chunk){
+    printf("Encountered unknown chunk\n");
+    /**
+     * If you call the png_set_read_user_chunk_fn() function, then all unknown 
+     * chunks which the callback does not handle will be saved when read. 
+     * You can cause them to be discarded by returning '1' ("handled") instead of '0'.
+     */
+    return 1;
+}
+
 
 /// @brief Initialize the two pointer variables for the png. Output to console on failure
 /// @param png_ptr 
@@ -44,6 +60,28 @@ int setup_png(png_structp* png_ptr, png_infop* info_ptr){
     return 1;
 }
 
+/// @brief Read the background image and init the r,g,b values
+/// @param red 
+/// @param green 
+/// @param blue 
+/// @param png_ptr 
+/// @param info_ptr 
+/// @return 
+int read_bg(uchar* red,uchar* green,uchar* blue, png_structp png_ptr, png_infop info_ptr){
+    if (!png_get_valid(png_ptr, info_ptr, PNG_INFO_bKGD))
+        return 1;
+        
+    // Get pointer to background
+    png_color_16p pBackground;
+    png_get_bKGD(png_ptr, info_ptr, &pBackground);
+
+}
+
+/// @brief Reads from the PNG struct
+/// @param png_ptr 
+/// @param info_ptr 
+/// @param f_ptr 
+/// @return 
 int read_png(png_structp png_ptr, png_infop info_ptr, FILE* f_ptr){
     // According to the guide, it takes the file pointer and stores it in the png pointer
     png_init_io(png_ptr, f_ptr);
@@ -51,23 +89,28 @@ int read_png(png_structp png_ptr, png_infop info_ptr, FILE* f_ptr){
     png_set_sig_bytes(png_ptr, 8);
 
     // Begin processing the png file
-    /*
-     * png_read_info() is the first libpng call we've seen that does any real work. 
-     * It reads and processes not only the PNG file's IHDR chunk but also any other chunks up to the first IDAT 
-     * (i.e., everything before the image data). For colormapped images this includes the PLTE chunk and possibly 
-     * tRNS and bKGD chunks. It typically also includes a gAMA chunk; perhaps cHRM, sRGB, or iCCP; and often tIME 
-     * and some tEXt chunks. All this information is stored in the information struct and some in the PNG struct, too, 
-     * but for now, all we care about is the contents of IHDR--specifically, the image width and height:
-     */
-    png_read_info(png_ptr, info_ptr);
-    png_uint_32 width;
-    png_uint_32 height;
-    int bit_depth;
-    int color_type;
-    png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth,
-      &color_type, NULL, NULL, NULL);
+    #if PNG_LIBPNG_VER >= 10504
+        png_set_alpha_mode(png_ptr, PNG_ALPHA_STANDARD, PNG_DEFAULT_sRGB);
+    #endif
 
-    printf("The width is %d and the height is %d\n", width, height);
+    // Using the high level interface for reading pngs
+    png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_SCALE_16 | PNG_TRANSFORM_PACKING, NULL);
+    
+    // It's good to get the image height and width
+    int width = png_get_image_width(png_ptr, info_ptr);
+    int height = png_get_image_height(png_ptr, info_ptr);
+
+    printf("The height and width are %d and %d \n", height, width);
+
+    // And validate it early before reading
+    if (height > PNG_UINT_32_MAX/(sizeof (png_byte)))
+        png_error (png_ptr, "Image is too tall to process in memory\n");
+
+    if (width > PNG_UINT_32_MAX/PIXEL_SIZE )
+        png_error (png_ptr, "Image is too wide to process in memory\n");
+
+    // Get the row pointers 
+    png_bytepp row_pointers = png_get_rows(png_ptr, info_ptr);
     
     return 0;
 }
