@@ -5,8 +5,7 @@
 
 static int WIDTH = 500;
 static int HEIGHT = 500;
-// You only want it to check for exposure for now
-static long ALLOWED_INPUTS = ExposureMask;
+static long ALLOWED_INPUTS = ExposureMask | ClientMessage;
 
 // Kept as globals since there's only one window
 Display *display;
@@ -36,10 +35,36 @@ void initialize_xwindow(){
     // And now set the background and foreground
     XSetBackground(display, gc, white);
 	XSetForeground(display, gc, black);
+
+    // Obtain an atom name for deleting the window
+    // So that the client may receive a message that the window is closing
+    Atom wmDelete = XInternAtom(display, "WM_DELETE_WINDOW", True);
+    XSetWMProtocols(display, window, &wmDelete, 1);
 }
 
+/// @brief Frees resources taken by xwindow
 void close_xwindow(){
+	XFreeGC(display, gc);
+	XDestroyWindow(display,window);
+	XCloseDisplay(display);
+}
 
+void run_window_loop( void(*exposure_callback)(), void (*exit_callback)() ){
+    XEvent event;
+    while(1) {		
+		// Read the next event and run the appropriate routine
+		XNextEvent(display, &event);
+        
+        switch(event.type){
+            case Expose: 
+                (exposure_callback)();
+                break;
+            case ClientMessage: 
+                close_xwindow();
+                (exit_callback)();
+                return;
+        }
+	}
 }
 
 void draw_png_xwindow(){
