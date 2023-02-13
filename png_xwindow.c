@@ -2,6 +2,7 @@
 /// It also handles any routines for x11 to use
 /// Credit to this guide: http://mech.math.msu.su/~vvb/2course/Borisenko/CppProjects/GWindow/xintro.html
 #include <X11/Xlib.h>
+#include "png.h"
 
 static int WIDTH = 500;
 static int HEIGHT = 500;
@@ -12,10 +13,24 @@ Display *display;
 int screen;
 Window window;
 GC gc;
+Visual *visual;
+int depth;
 unsigned long black, white;
 
+
+XImage* get_ximage_from_png(png_bytepp png_bytes, png_image image){
+    png_bytep row = png_bytes[0];
+    png_byte thing = row[0];
+    int width, height;
+
+    int format = ZPixmap;
+    char* image_data = malloc(width*height*sizeof(char));
+    XImage* img = XCreateImage(display, visual, depth, format, 0, image_data, width, height, 16, 0);
+    
+}
+
 /// @brief Based off the guide's initialization of the x window. 
-void initialize_xwindow(){
+int initialize_xwindow(){
     // Create an X connection and initialize the screen var
     display = XOpenDisplay((char *)0);
     screen = DefaultScreen(display);
@@ -29,8 +44,17 @@ void initialize_xwindow(){
     // Initialize what inputs are allowed. 
 	XSelectInput(display, window, ALLOWED_INPUTS);
 
+    
     // Create the graphics context
-    gc = XCreateGC(display, window, 0,0);    
+    gc = XCreateGC(display, window, 0,0);  
+    // Get the visual
+    XWindowAttributes attr;
+    XGetWindowAttributes(display, window, &attr);
+
+    visual = attr.visual;
+    depth = DefaultDepth(display, screen);
+
+    printf("Depth: %d \n", depth);
 
     // And now set the background and foreground
     XSetBackground(display, gc, white);
@@ -54,7 +78,7 @@ void run_window_loop( void(*exposure_callback)(), void (*exit_callback)() ){
     while(1) {		
 		// Read the next event and run the appropriate routine
 		XNextEvent(display, &event);
-        
+
         switch(event.type){
             case Expose: 
                 (exposure_callback)();

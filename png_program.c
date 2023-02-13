@@ -1,14 +1,35 @@
 #include <X11/Xlib.h>
 #include "png.h"
+#include "png_structs.h"
+
+static png_img image;
+static XImage* ximage;
+
+/// @brief Draws the XImage to the screen
+void draw(){
+
+}
+
+/// @brief Frees the image pixel data
+void exit(){
+    for(int y = 0; y<image.height; y++){
+        free(image.pixels[y]);
+    }
+    free(image.pixels);
+}
 
 /// @brief Try to load the png 
 /// @param path 
 /// @return 
 int init(char* path){
-    png_bytepp png_data;
-    int width, height;
 
-    
+    // Load the image and connect to the xserver
+    if(load_png(path, &image)){
+        initialize_xwindow();
+        
+        return 1;
+    }
+    return 0;
 }
 
 int main(int argc, char* argv[]){
@@ -19,8 +40,9 @@ int main(int argc, char* argv[]){
     }
     // Get the path from argv
     char* path = argv[1];
-
-    if(init)
+    if(init(path)){
+        run_window_loop();
+    }
 
     // In
     return 0;

@@ -1,7 +1,11 @@
 #include "png.h"
 #include <stdio.h>
-typedef unsigned char uchar;
+#include <X11/Xlib.h>
+#include "png_structs.h"
+
 #define PIXEL_SIZE 8
+
+typedef unsigned char uchar;
 
 /// @brief Checks the png signature and outputs to consule
 /// @param f_ptr 
@@ -77,12 +81,13 @@ int read_bg(uchar* red,uchar* green,uchar* blue, png_structp png_ptr, png_infop 
 
 }
 
+
 /// @brief Reads from the PNG struct
 /// @param png_ptr 
 /// @param info_ptr 
 /// @param f_ptr 
 /// @return 
-int read_png(png_structp png_ptr, png_infop info_ptr, FILE* f_ptr, int* png_width, int* png_height, png_bytepp* png_data){
+int read_png(png_structp png_ptr, png_infop info_ptr, FILE* f_ptr, png_img* image){
     // According to the guide, it takes the file pointer and stores it in the png pointer
     png_init_io(png_ptr, f_ptr);
     // Lets the library know that the first 8 bytes were checked, so it wont find it at the file pointer location
@@ -110,14 +115,33 @@ int read_png(png_structp png_ptr, png_infop info_ptr, FILE* f_ptr, int* png_widt
         png_error (png_ptr, "Image is too wide to process in memory\n");
 
     // Get the row pointers 
-    *png_data = png_get_rows(png_ptr, info_ptr);
-    *png_width = width;
-    *png_height = height;
+    png_bytepp row_pointers = png_get_rows(png_ptr, info_ptr);
+
+    // Allocate the pixels in the struct
+    image->width = width;
+    image->height= height;
+    image->pixels = malloc(sizeof(png_pix*)*height);
+
+    // Get pixels
+    for(int y = 0; y < height; y++){
+        png_bytep row = row_pointers[y];
+        image->pixels[y] = malloc(sizeof(png_pix)*width);
+        
+        // Populate each row with the actual pixel data
+        for( int x = 0; x < width; x++){
+            png_bytep pixel = &(row[x * 4]);
+            image->pixels[y][x].r = pixel[0];
+            image->pixels[y][x].g = pixel[1];
+            image->pixels[y][x].b = pixel[2];
+            image->pixels[y][x].a = pixel[3];
+        }
+    }
+
     
     return 0;
 }
 
-int open_png(FILE* f_ptr, int* width, int* height, png_bytepp* png_data){
+int open_png(FILE* f_ptr, png_img* image){
     // Exit if the file is invalid
     if(!check_file(f_ptr)){
         return 0;
@@ -135,24 +159,24 @@ int open_png(FILE* f_ptr, int* width, int* height, png_bytepp* png_data){
         return 0;
     }
 
-    read_png(png_ptr, info_ptr, f_ptr, width, height, png_data);
+    read_png(png_ptr, info_ptr, f_ptr, image);
     // dispose structs
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
     return 1;
 }
 
 
-int load_png(char* path, int* width, int* height, png_bytepp* png_data){
+int load_png(char* path, png_img* image){
     FILE* f_ptr = fopen(path, "rb");
 
     // pointer exists if file exists
     if(f_ptr){
-        if(!open_png(f_ptr, width, height, png_data)){
+        if(!open_png(f_ptr, image)){
             printf("Failed to read png.\n");
         }
         // close at the end
         fclose(f_ptr);
-        return 0;
+        return 1;
     }else{
         printf("No such file: %s \n", path);
         return 0;
