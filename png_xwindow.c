@@ -3,10 +3,14 @@
 /// Credit to this guide: http://mech.math.msu.su/~vvb/2course/Borisenko/CppProjects/GWindow/xintro.html
 #include <X11/Xlib.h>
 #include "png.h"
+#include "png_structs.h"
 
 static int WIDTH = 500;
 static int HEIGHT = 500;
-static long ALLOWED_INPUTS = ExposureMask | ClientMessage;
+static long ALLOWED_INPUTS = ExposureMask | ClientMessage | KeyPressMask;
+
+int scroll_x = 0;
+int scroll_y = 0;
 
 // Kept as globals since there's only one window
 Display *display;
@@ -17,16 +21,30 @@ Visual *visual;
 int depth;
 unsigned long black, white;
 
+unsigned long get_rgb_pixel(uchar r, uchar g, uchar b){
+    return b + (g << 8) + (r << 16);
+}
 
-XImage* get_ximage_from_png(png_bytepp png_bytes, png_image image){
-    png_bytep row = png_bytes[0];
-    png_byte thing = row[0];
-    int width, height;
-
+void get_ximage_from_png(png_img image, XImage** ximage){
     int format = ZPixmap;
-    char* image_data = malloc(width*height*sizeof(char));
-    XImage* img = XCreateImage(display, visual, depth, format, 0, image_data, width, height, 16, 0);
-    
+    unsigned int width = image.width;
+    unsigned int height = image.height;
+    char* image_data = malloc(width * height * sizeof(unsigned long));
+
+    *ximage = XCreateImage(display, visual, depth, ZPixmap, 0, image_data, width, height, 16, 0);
+    int status = XInitImage(*ximage);
+    if(status == 0){
+        printf("Could not init ximage idk\n");
+        return 1;
+    }
+
+    for(int y = 0; y < height; y++){
+        for(int x = 0; x < width; x++){
+            png_pix pixel = image.pixels[y][x];
+            unsigned long pixel_color = get_rgb_pixel(pixel.r, pixel.g, pixel.b);
+            XPutPixel(*ximage, x, y, pixel_color);
+        }
+    }
 }
 
 /// @brief Based off the guide's initialization of the x window. 
@@ -44,7 +62,6 @@ int initialize_xwindow(){
     // Initialize what inputs are allowed. 
 	XSelectInput(display, window, ALLOWED_INPUTS);
 
-    
     // Create the graphics context
     gc = XCreateGC(display, window, 0,0);  
     // Get the visual
@@ -64,6 +81,10 @@ int initialize_xwindow(){
     // So that the client may receive a message that the window is closing
     Atom wmDelete = XInternAtom(display, "WM_DELETE_WINDOW", True);
     XSetWMProtocols(display, window, &wmDelete, 1);
+
+    // Clear the window and bring it on top
+	XClearWindow(display, window);
+	XMapRaised(display, window);
 }
 
 /// @brief Frees resources taken by xwindow
@@ -87,10 +108,25 @@ void run_window_loop( void(*exposure_callback)(), void (*exit_callback)() ){
                 close_xwindow();
                 (exit_callback)();
                 return;
+                
+            case KeyPress:
+                if(event.xkey.keycode == 113){
+                    scroll_x += 10;
+                }
+                if(event.xkey.keycode == 114){
+                    scroll_x -= 10;
+                }
+                if(event.xkey.keycode == 116){
+                    scroll_y -= 10;
+                }
+                if(event.xkey.keycode == 111){
+                    scroll_y += 10;
+                }
+                (exposure_callback)();
         }
 	}
 }
 
-void draw_png_xwindow(){
-
+void draw_png_xwindow(XImage* image, int width, int height){
+    XPutImage(display, window, gc, image, 0, 0, scroll_x, scroll_y, width, height);
 }

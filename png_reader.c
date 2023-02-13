@@ -5,8 +5,6 @@
 
 #define PIXEL_SIZE 8
 
-typedef unsigned char uchar;
-
 /// @brief Checks the png signature and outputs to consule
 /// @param f_ptr 
 /// @return 1 if successful

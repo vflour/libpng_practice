@@ -1,8 +1,10 @@
+typedef unsigned char uchar;
+
 typedef struct PNG_PIX{
-    char r;
-    char g;
-    char b;
-    char a;
+    uchar r;
+    uchar g;
+    uchar b;
+    uchar a;
 } png_pix;
 
 typedef struct PNG_IMG{
