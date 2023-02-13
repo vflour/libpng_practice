@@ -1,3 +1,5 @@
+// Main program file
+
 #include <X11/Xlib.h>
 #include "png.h"
 #include "png_structs.h"

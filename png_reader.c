@@ -1,3 +1,6 @@
+/// The reader class file
+/// There's a bunch of unused functions. Don't worry about it lol
+
 #include "png.h"
 #include <stdio.h>
 #include <X11/Xlib.h>
