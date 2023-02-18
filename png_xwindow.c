@@ -21,8 +21,19 @@ Visual *visual;
 int depth;
 unsigned long black, white;
 
-unsigned long get_rgb_pixel(uchar r, uchar g, uchar b){
+/// @brief Get a long pixel value for XWindow from rgb values
+/// @param r 
+/// @param g 
+/// @param b 
+/// @return 
+unsigned long rgb_to_long(uchar r, uchar g, uchar b){
     return b + (g << 8) + (r << 16);
+}
+
+void long_to_rgb(long pixel, uchar* r, uchar* g, uchar* b){
+    *r = (uchar) (pixel >> 16);
+    *g = (uchar)((pixel & 0x00ff00) >> 8);
+    *b = (uchar) (pixel & 0x0000ff);
 }
 
 void get_ximage_from_png(png_img image, XImage** ximage){
@@ -41,11 +52,50 @@ void get_ximage_from_png(png_img image, XImage** ximage){
     for(int y = 0; y < height; y++){
         for(int x = 0; x < width; x++){
             png_pix pixel = image.pixels[y][x];
-            unsigned long pixel_color = get_rgb_pixel(pixel.r, pixel.g, pixel.b);
+            unsigned long pixel_color = rgb_to_long(pixel.r, pixel.g, pixel.b);
             XPutPixel(*ximage, x, y, pixel_color);
         }
     }
 }
+
+/// @brief Gets a png_img struct from an ximage
+/// @param ximage 
+/// @return png_img buffer
+png_img get_png_from_ximage(XImage* ximage){
+    int height = ximage->height;
+    int width = ximage->width;
+
+    // Init fields
+    png_img image;
+    image.height = height;
+    image.width = width;
+    image.pixels = malloc(sizeof(png_pix*)*height);
+
+    // Go through each row and allocate it
+    for(int y = 0; y < height; y++){
+        image.pixels[y] = malloc(sizeof(png_pix)*width);
+
+        // Then get the pixels for each row
+        for(int x = 0; x < width; x++){
+            // Get rgb from long pixel
+            long ximage_pix = XGetPixel(ximage, x, y);
+            uchar r,g,b;
+            long_to_rgb(ximage_pix, &r, &g, &b);
+
+            // Assign pixel data, assuming window is opaque
+            image.pixels[y][x].r = r;
+            image.pixels[y][x].g = g;
+            image.pixels[y][x].b = b;
+            image.pixels[y][x].a = 255;
+        }
+    }
+
+    return image;
+}
+
+void get_ximage_from_window(XImage** ximage){
+    *ximage = XGetImage(display, window, 0, 0, WIDTH, HEIGHT, AllPlanes, ZPixmap);
+}   
 
 /// @brief Based off the guide's initialization of the x window. 
 int initialize_xwindow(){
@@ -94,8 +144,12 @@ void close_xwindow(){
 	XCloseDisplay(display);
 }
 
-void run_window_loop( void(*exposure_callback)(), void (*exit_callback)() ){
+void run_window_loop( void(*exposure_callback)(), void (*exit_callback)(), void (*save_callback)() ){
     XEvent event;
+    // Key handling
+	KeySym key;	
+	char text[255];		
+
     while(1) {		
 		// Read the next event and run the appropriate routine
 		XNextEvent(display, &event);
@@ -121,6 +175,12 @@ void run_window_loop( void(*exposure_callback)(), void (*exit_callback)() ){
                 }
                 if(event.xkey.keycode == 111){
                     scroll_y += 10;
+                }
+                // Take a screenie
+                if (XLookupString(&event.xkey,text,255,&key,0)==1){
+                    if (text[0]=='s') {
+                        (save_callback)();
+                    }
                 }
                 (exposure_callback)();
         }
