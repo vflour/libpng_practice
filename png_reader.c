@@ -1,13 +1,12 @@
 /// The png reader class file
 
-#include "png.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <X11/Xlib.h>
+#include "png.h"
 #include "png_structs.h"
 
 #define PIXEL_SIZE 8
-#define ERROR 0
-#define SUCCESS 1
 
 /// @brief Checks the png signature and outputs to consule
 /// @param f_ptr 
@@ -102,7 +101,7 @@ int open_png_read(FILE* f_ptr, png_img* image){
     // Same applies here with the info struct
     png_infop info_ptr = png_create_info_struct(png_ptr);
     if (!info_ptr) {
-        png_destroy_read_struct(png_ptr, NULL, NULL);
+        png_destroy_read_struct(&png_ptr, NULL, NULL);
         perror("Could not initialize PNG info struct \n");
         return ERROR;
     }
@@ -178,7 +177,7 @@ int open_png_write(FILE* f_ptr, png_img* image){
     // Setup info ptr
     png_infop info_ptr = png_create_info_struct(png_ptr);
     if (!info_ptr){
-        png_destroy_write_struct(png_ptr, NULL);
+        png_destroy_write_struct(&png_ptr, NULL);
         perror("Could not initialize PNG info struct \n");
         return ERROR;
     }

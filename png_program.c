@@ -1,12 +1,14 @@
 // Main program file
 
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <stdlib.h>
 #include "png.h"
-#include "png_structs.h"
+#include "png_xwindow.h"
+#include "png_reader.h"
 
 XImage* ximage;
 XImage* saved_image;
-png_img get_png_from_ximage(XImage* ximage);
 
 /// @brief Draws the XImage to the screen
 void draw(){
@@ -30,7 +32,7 @@ void save_image(){
 }
 
 /// @brief Frees the image pixel data
-void exit(){
+void exit_program(){
     printf("Exiting...\n");
     if(saved_image != NULL){
         XDestroyImage(saved_image);
@@ -41,16 +43,19 @@ void exit(){
 /// @brief Try to load the png 
 /// @param path 
 /// @return 
-int init(char* path){
+int init_program(char* path){
     png_img image; 
     // Load the image and connect to the xserver
     if(load_png(path, &image)){
         initialize_xwindow();
         get_ximage_from_png(image, &ximage);
+        if(!ximage){
+            return ERROR;
+        }
         free_img(image);
-        return 1;
+        return SUCCESS;
     }
-    return 0;
+    return ERROR;
 }
 
 int main(int argc, char* argv[]){
@@ -61,10 +66,9 @@ int main(int argc, char* argv[]){
     }
     // Get the path from argv
     char* path = argv[1];
-    if(init(path)){
-        run_window_loop(&draw, &exit, &save_image);
+    if(init_program(path)){
+        run_window_loop(&draw, &exit_program, &save_image);
     }
 
-    // In
     return 0;
 }

@@ -2,6 +2,8 @@
 /// It also handles any routines for x11 to use
 /// Credit to this guide: http://mech.math.msu.su/~vvb/2course/Borisenko/CppProjects/GWindow/xintro.html
 #include <X11/Xlib.h>
+#include <stdlib.h>
+#include <X11/Xutil.h>
 #include "png.h"
 #include "png_structs.h"
 
@@ -53,8 +55,8 @@ void get_ximage_from_png(png_img image, XImage** ximage){
     *ximage = XCreateImage(display, visual, depth, ZPixmap, 0, image_data, width, height, 16, 0);
     int status = XInitImage(*ximage);
     if(status == 0){
-        printf("Could not init ximage idk\n");
-        return 1;
+        printf("Could not init ximage\n");
+        return;
     }
 
     for(int y = 0; y < height; y++){

@@ -1,3 +1,9 @@
+#ifndef PNG_STRUCT_HEADER
+#define PNG_STRUCT_HEADER
+
+#define ERROR 0
+#define SUCCESS 1
+
 typedef unsigned char uchar;
 
 typedef struct PNG_PIX{
@@ -13,6 +19,6 @@ typedef struct PNG_IMG{
     png_pix** pixels;
 } png_img;
 
-/// @brief Frees the pixel buffer inside the image
-/// @param image
 void free_img(png_img image);
+
+#endif
