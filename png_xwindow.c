@@ -30,12 +30,20 @@ unsigned long rgb_to_long(uchar r, uchar g, uchar b){
     return b + (g << 8) + (r << 16);
 }
 
+/// @brief Sets the values of r,g,b from an xWindow pixel color
+/// @param pixel The long representing the pixel value
+/// @param r 
+/// @param g 
+/// @param b 
 void long_to_rgb(long pixel, uchar* r, uchar* g, uchar* b){
     *r = (uchar) (pixel >> 16);
     *g = (uchar)((pixel & 0x00ff00) >> 8);
     *b = (uchar) (pixel & 0x0000ff);
 }
 
+/// @brief Creates an XImage from the png buffer
+/// @param image 
+/// @param ximage 
 void get_ximage_from_png(png_img image, XImage** ximage){
     int format = ZPixmap;
     unsigned int width = image.width;
@@ -93,6 +101,8 @@ png_img get_png_from_ximage(XImage* ximage){
     return image;
 }
 
+/// @brief Retrieves an ximage from the current window
+/// @param ximage 
 void get_ximage_from_window(XImage** ximage){
     *ximage = XGetImage(display, window, 0, 0, WIDTH, HEIGHT, AllPlanes, ZPixmap);
 }   
@@ -144,7 +154,11 @@ void close_xwindow(){
 	XCloseDisplay(display);
 }
 
-void run_window_loop( void(*exposure_callback)(), void (*exit_callback)(), void (*save_callback)() ){
+/// @brief Runs the window event loop until the window is closed
+/// @param draw_callback Runs when the window is being drawn
+/// @param exit_callback Runs when the window is exited
+/// @param save_callback Runs when a screenshot is saved
+void run_window_loop( void(*draw_callback)(), void (*exit_callback)(), void (*save_callback)() ){
     XEvent event;
     // Key handling
 	KeySym key;	
@@ -156,7 +170,7 @@ void run_window_loop( void(*exposure_callback)(), void (*exit_callback)(), void 
 
         switch(event.type){
             case Expose: 
-                (exposure_callback)();
+                (draw_callback)();
                 break;
             case ClientMessage: 
                 close_xwindow();
@@ -182,11 +196,15 @@ void run_window_loop( void(*exposure_callback)(), void (*exit_callback)(), void 
                         (save_callback)();
                     }
                 }
-                (exposure_callback)();
+                (draw_callback)();
         }
 	}
 }
 
+/// @brief Put the XImage on the window
+/// @param image 
+/// @param width 
+/// @param height 
 void draw_png_xwindow(XImage* image, int width, int height){
     XPutImage(display, window, gc, image, 0, 0, scroll_x, scroll_y, width, height);
 }

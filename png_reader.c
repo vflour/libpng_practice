@@ -1,5 +1,4 @@
-/// The reader class file
-/// There's a bunch of unused functions. Don't worry about it lol
+/// The png reader class file
 
 #include "png.h"
 #include <stdio.h>
@@ -7,7 +6,8 @@
 #include "png_structs.h"
 
 #define PIXEL_SIZE 8
-
+#define ERROR 0
+#define SUCCESS 1
 
 /// @brief Checks the png signature and outputs to consule
 /// @param f_ptr 
@@ -20,9 +20,9 @@ int check_file(FILE* f_ptr){
     // if the signature is bad, then close
     if(!png_check_sig(sig, 8)){
         printf("Bad PNG signature, closing...\n");
-        return 0;
+        return ERROR;
     }
-    return 1;
+    return SUCCESS;
 }   
 
 
@@ -30,8 +30,7 @@ int check_file(FILE* f_ptr){
 /// @param png_ptr 
 /// @param info_ptr
 /// @param image
-/// @return 
-int read_png(png_structp png_ptr, png_infop info_ptr, png_img* image){
+void read_png(png_structp png_ptr, png_infop info_ptr, png_img* image){
     // Lets the library know that the first 8 bytes were checked, so it wont find it at the file pointer location
     png_set_sig_bytes(png_ptr, 8);
 
@@ -78,15 +77,16 @@ int read_png(png_structp png_ptr, png_infop info_ptr, png_img* image){
             image->pixels[y][x].a = pixel[3];
         }
     }
-
-    
-    return 0;
 }
 
+/// @brief Opens a png for reading and writes to the png_image arg
+/// @param f_ptr 
+/// @param image The struct it writes the pixel data to
+/// @return
 int open_png_read(FILE* f_ptr, png_img* image){
     // Exit if the file is invalid
     if(!check_file(f_ptr)){
-        return 0;
+        return ERROR;
     }
     // Update the png_ptr pointer to the new struct
     // Meaning you need to dereference the ptr variable and not the ptr itself
@@ -96,7 +96,7 @@ int open_png_read(FILE* f_ptr, png_img* image){
     // If there's no pointer then there's an issue
     if (!png_ptr){
         perror("Could not initialize PNG write struct \n");
-        return 0;
+        return ERROR;
     }
   
     // Same applies here with the info struct
@@ -104,14 +104,14 @@ int open_png_read(FILE* f_ptr, png_img* image){
     if (!info_ptr) {
         png_destroy_read_struct(png_ptr, NULL, NULL);
         perror("Could not initialize PNG info struct \n");
-        return 0;
+        return ERROR;
     }
 
     // use setjmp since libpng relies on it for errors
     if (setjmp(png_jmpbuf(png_ptr))){
         png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
         perror("Encountered an error while reading the png\n");
-        return 0;
+        return ERROR;
     }
     // According to the guide, it takes the file pointer and stores it in the png pointer
     png_init_io(png_ptr, f_ptr);
@@ -120,9 +120,14 @@ int open_png_read(FILE* f_ptr, png_img* image){
 
     // dispose structs
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-    return 1;
+    return SUCCESS;
 }
 
+/// @brief Writes a png with the given image data
+/// @param png_ptr 
+/// @param info_ptr 
+/// @param image 
+/// @return 
 int write_png(png_structp png_ptr, png_infop info_ptr, png_img* image){
     int width = image->width;
     int height = image->height;
@@ -158,12 +163,16 @@ int write_png(png_structp png_ptr, png_infop info_ptr, png_img* image){
     png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
 }
 
+/// @brief Writes the png_image data to the file
+/// @param f_ptr 
+/// @param image 
+/// @return 
 int open_png_write(FILE* f_ptr, png_img* image){
     // Set up png_ptr for write
     png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (!png_ptr){
         perror("Could not initialize PNG write struct \n");
-        return 0;
+        return ERROR;
     }
 
     // Setup info ptr
@@ -171,14 +180,14 @@ int open_png_write(FILE* f_ptr, png_img* image){
     if (!info_ptr){
         png_destroy_write_struct(png_ptr, NULL);
         perror("Could not initialize PNG info struct \n");
-        return 0;
+        return ERROR;
     }
 
     //Setup error handling
     if(setjmp(png_jmpbuf(png_ptr))){
         png_destroy_write_struct(&png_ptr, &info_ptr);
         perror("Encountered an error while writing the png\n");
-        return 0;
+        return ERROR;
     }
 
     // Initialize I/O
@@ -186,10 +195,13 @@ int open_png_write(FILE* f_ptr, png_img* image){
     // Commence writing
     write_png(png_ptr, info_ptr, image);
         
-    return 1;
+    return SUCCESS;
 }
 
-
+/// @brief Loads a png file into image
+/// @param path The path to the png file
+/// @param image
+/// @return 
 int load_png(char* path, png_img* image){
     FILE* f_ptr = fopen(path, "rb");
 
@@ -202,13 +214,17 @@ int load_png(char* path, png_img* image){
         }
         // close at the end
         fclose(f_ptr);
-        return 1;
+        return SUCCESS;
     }
 
     printf("No such file: %s \n", path);
-    return 0;
+    return ERROR;
 }
 
+/// @brief Saves a png image to a file
+/// @param path The path to the png file
+/// @param image
+/// @return 
 int save_png(char* path, png_img* image){
     FILE* f_ptr = fopen(path, "wb");
 
@@ -219,9 +235,9 @@ int save_png(char* path, png_img* image){
             abort();
         }
         fclose(f_ptr);
-        return 1;
+        return SUCCESS;
     }
 
     printf("Could not open stream for writing to %s. \n", path);
-    return 0;
+    return ERROR;
 }

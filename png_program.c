@@ -13,6 +13,7 @@ void draw(){
     draw_png_xwindow(ximage, ximage->width, ximage->height);
 }
 
+/// @brief Takes a screenshot and saves it to test_save.png
 void save_image(){
     char* path = "test_save.png";
 
@@ -36,8 +37,6 @@ void exit(){
     }
     //XDestroyImage(ximage);
 }
-
-
 
 /// @brief Try to load the png 
 /// @param path 
