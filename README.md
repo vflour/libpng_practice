@@ -1,4 +1,4 @@
-#Libpng Practice
+# Libpng Practice
 
 ## Compiling & Running
 - The makefile is provided in the repository. You can run ``make`` to use it.
